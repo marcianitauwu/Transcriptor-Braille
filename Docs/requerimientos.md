@@ -41,6 +41,7 @@ Desarrollar una aplicación de escritorio que genere textos en el sistema de lec
 **Descripción:** La aplicación debe implementar correctamente el símbolo generador Braille basado en 6 puntos dispuestos en 2 columnas de 3 puntos cada una.
 
 **Especificaciones:**
+
 <img width="273" height="455" alt="image" src="https://github.com/user-attachments/assets/3b4247d3-d7ab-400b-a539-1f69920b54db" />
 
 
