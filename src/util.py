@@ -57,3 +57,23 @@ def is_valid_text(text: str) -> bool:
       # Carácter no válido
       return False
    return True
+# --------------------------------------------------------
+def is_braille(text: str) -> bool:
+    """Verifica si una cadena de texto contiene únicamente caracteres Braille válidos o espacios.
+
+    Utiliza el rango Unicode estándar para las celdas Braille (U+2800 a U+28FF, que corresponde
+    a '⠀' hasta '⣿').
+
+    Args:
+        text (str): La cadena a validar.
+
+    Returns:
+        bool: True si la cadena es Braille válido (o solo espacios), False en caso contrario.
+    """
+    # Verifica si todos los caracteres pertenecen al rango Braille
+    for ch in text:
+        if ch == " ":
+            continue
+        if not ("⠁" <= ch <= "⣿"):
+            return False
+    return True
