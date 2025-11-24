@@ -1,5 +1,7 @@
 # gui.py
 import tkinter as tk
+import ctypes
+import sys
 from tkinter import messagebox
 import customtkinter as ctk
 from PIL import Image, ImageTk 
@@ -22,6 +24,16 @@ class BrailleApp(ctk.CTk):
         super().__init__()
         
         self.geometry("850x600")
+        
+        # Icono de la aplicación en Windows
+        if sys.platform == "win32":
+            app_id = "samira.braille.transcriptor.1.0"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+
+        try:
+            self.iconbitmap("src/img/icono.ico")
+        except:
+            pass
 
         self.title("Transcriptor Braille")
 
