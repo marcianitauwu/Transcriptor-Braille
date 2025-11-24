@@ -5,17 +5,12 @@ módulo gui. Provee una entrada clara para ejecutar la aplicación desde la
 línea de comandos.
 
 Uso:
-    python src/main.py
+  python src/main.py
 
 Requisitos:
 - El módulo 'gui' debe definir la clase BrailleApp.
 - BrailleApp debe ser una aplicación basada en tkinter (o compatible) con un
   método mainloop() para iniciar el bucle de la interfaz.
-
-Ejemplo:
-    from gui import BrailleApp
-    app = BrailleApp()
-    app.mainloop()
 """
 
 # main.py
