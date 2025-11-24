@@ -7,7 +7,7 @@ class BrailleTranslator:
     algunos carácteres acentuados, a su representación en Braille.
     """         
 
-    def _init_(self):
+    def __init__(self):
         """Inicializa los mapas de traducción.
         
         Atributos:
