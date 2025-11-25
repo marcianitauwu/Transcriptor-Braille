@@ -36,6 +36,9 @@ def is_valid_text(text: str) -> bool:
    Returns:
       bool: True si el texto es válido, False en caso contrario.
    """
+   if not text:
+        return False
+     
    for ch in text:
 
       # Espacios permitidos
@@ -71,9 +74,16 @@ def is_braille(text: str) -> bool:
         bool: True si la cadena es Braille válido (o solo espacios), False en caso contrario.
     """
     # Verifica si todos los caracteres pertenecen al rango Braille
+    if not text:
+        return False
+
+    # ⣿ es Unicode Braille, pero NO se usa en Braille literario → no se incluye.
+    valid = set(translator.inverse.keys()) | \
+            set(translator.inverse_numbers.keys()) | \
+            {translator.PNUM, translator.PMAYUS, " "}
+
     for ch in text:
-        if ch == " ":
-            continue
-        if not ("⠁" <= ch <= "⣿"):
+        if ch not in valid:
             return False
+
     return True
