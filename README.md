@@ -53,3 +53,5 @@ Transcriptor-Braille/
 │   └── reportes/
 │       ├── reporte_texto.txt
 │       └── reporte_visual.html
+├── README.md
+├── requirements.txt
