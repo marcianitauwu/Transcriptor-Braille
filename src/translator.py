@@ -101,20 +101,34 @@ class BrailleTranslator:
         Returns:
             str: Cadena resultante de representación en Braille del texto.
         """
-        result = ""
-        for ch in text:
-            # Mayúsculas
-            if ch.isalpha() and ch.isupper():
-                base = ch.lower()
-                result += self.PMAYUS + self.map.get(base, "?")
-                continue
-            # Números
-            if ch.isdigit():
-                result += self.PNUM + self.numbers[ch]
-                continue
-            # Minúsculas y otros
-            result += self.map.get(ch, "?")
-        return result
+        def text_to_braille(self, text):
+            result = ""
+            modo_numerico = False
+
+            for ch in text:
+
+                # 1) Manejo de dígitos
+                if ch.isdigit():
+                    if not modo_numerico:
+                        result += self.PNUM  # activa modo numérico con ⠼
+                        modo_numerico = True
+                    result += self.numbers[ch]
+                    continue
+                
+                # 2) Si aparece algo NO numérico, se apaga el modo
+                if modo_numerico and not ch.isdigit():
+                    modo_numerico = False
+
+                # 3) Manejo de mayúsculas
+                if ch.isalpha() and ch.isupper():
+                    base = ch.lower()
+                    result += self.PMAYUS + self.map.get(base, "?")
+                    continue
+
+                # 4) Letras, acentos, signos, espacio
+                result += self.map.get(ch, "?")
+
+            return result
 
     # Braille a texto
     def braille_to_text(self, braille):
@@ -156,13 +170,16 @@ class BrailleTranslator:
                 continue
             
             if is_number:
-                numero = self.inverse_numbers.get(ch, None)
-                if numero is not None:
-                    result += numero
+                # Si es un símbolo numérico válido
+                if ch in self.inverse_numbers:
+                    result += self.inverse_numbers[ch]
                     i += 1
                     continue
                 
+                # Si NO es número → se apaga modo numérico
                 is_number = False
+                # Y se procesa como letra/signo normal (NO continue)
+
             
             # Signo 1 "¿"
             if ch == "⠢":
