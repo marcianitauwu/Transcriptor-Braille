@@ -7,7 +7,10 @@ def test_text_to_braille():
     # Casos básicos
     assert translator.text_to_braille("Hola") == "⠨⠓⠕⠇⠁"
     assert translator.text_to_braille("123") == "⠼⠁⠃⠉"
-    assert translator.text_to_braille("1,2,3") == "⠼⠁⠂⠼⠃⠂⠼⠉"
+    assert translator.text_to_braille("1,2,3") == "⠼⠁⠂⠃⠂⠉"
+    assert translator.text_to_braille("1 2 3") == "⠼⠁ ⠼⠃ ⠼⠉"
+    assert translator.text_to_braille("1, 2, 3") == "⠼⠁⠂ ⠼⠃⠂ ⠼⠉"
+    assert translator.text_to_braille("12a") == "⠼⠁⠃⠁"
 
     # Vocales acentuadas
     # á=⠷, é=⠮, í=⠌, ó=⠬, ú=⠾  (Corrección final)
@@ -15,7 +18,8 @@ def test_text_to_braille():
 
     # Signos
     assert translator.text_to_braille("Hola, ¿cómo estás?") == \
-           "⠨⠓⠕⠇⠁⠂ ⠦⠉⠕⠍⠕ ⠑⠎⠞⠁⠎⠦"
+           "⠨⠓⠕⠇⠁⠂ ⠢⠉⠬⠍⠕ ⠑⠎⠞⠷⠎⠢"
+    assert translator.text_to_braille("a; b") == "⠁⠆ ⠃"
 
     # Espacios
     assert translator.text_to_braille("Hola Mundo") == "⠨⠓⠕⠇⠁ ⠨⠍⠥⠝⠙⠕"
@@ -26,13 +30,15 @@ def test_braille_to_text():
     # Casos básicos
     assert translator.braille_to_text("⠨⠓⠕⠇⠁") == "Hola"
     assert translator.braille_to_text("⠼⠁⠃⠉") == "123"
-    assert translator.braille_to_text("⠼⠁⠂⠼⠃⠂⠼⠉") == "1,2,3"
+    assert translator.braille_to_text("⠼⠁⠂⠃⠂⠉") == "1,2,3"
+    assert translator.braille_to_text("⠼⠁⠂ ⠼⠃⠂ ⠼⠉") == "1, 2, 3"
+    assert translator.braille_to_text("⠼⠁ ⠼⠃ ⠼⠉") == "1 2 3"
 
     # Vocales acentuadas (consistente con text_to_braille)
     assert translator.braille_to_text("⠷⠮⠌⠬⠾") == "áéíóú"
 
     # Signos
-    assert translator.braille_to_text("⠨⠓⠕⠇⠁⠂ ⠦⠉⠕⠍⠕ ⠑⠎⠞⠁⠎⠦") == \
+    assert translator.braille_to_text("⠨⠓⠕⠇⠁⠂ ⠢⠉⠬⠍⠕ ⠑⠎⠞⠷⠎⠢") == \
            "Hola, ¿cómo estás?"
 
     # Espacios

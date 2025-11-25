@@ -83,52 +83,57 @@ class BrailleTranslator:
         self.inverse = {v: k for k, v in self.map.items()}
         self.inverse_numbers = {v: k for k, v in self.numbers.items()}
         
+    # Texto a Braille
+    """Convierte una cadena de texto en Braille.
+
+    La traducción maneja:
+    - mayúsculas
+    - minúsculas
+    - números usando prefijos especiales.
+    - carácteres acentuados.
+    - letra ñ.
+    
+    Cualquier carácter no mapeado se convierte en '?'.
+
+    Args:
+        text (str): Cadena de texto a convertir.
+
+    Returns:
+        str: Cadena resultante de representación en Braille del texto.
+    """
     def text_to_braille(self, text):
-        """Convierte una cadena de texto en Braille.
+        result = ""
+        modo_numerico = False
 
-        La traducción maneja:
-        - mayúsculas
-        - minúsculas
-        - números usando prefijos especiales.
-        - carácteres acentuados.
-        - letra ñ.
-        
-        Cualquier carácter no mapeado se convierte en '?'.
+        for ch in text:
 
-        Args:
-            text (str): Cadena de texto a convertir.
+            # 1) Dígitos → activan modo numérico
+            if ch.isdigit():
+                if not modo_numerico:
+                    result += self.PNUM
+                    modo_numerico = True
+                result += self.numbers[ch]
+                continue
 
-        Returns:
-            str: Cadena resultante de representación en Braille del texto.
-        """
-        def text_to_braille(self, text):
-            result = ""
-            modo_numerico = False
+            # 2) Comas dentro del número NO rompen modo numérico
+            if modo_numerico and ch == ",":
+                result += self.map[ch]
+                continue
 
-            for ch in text:
+            # 3) Si aparece algo que NO es digit ni coma → cerrar modo
+            if modo_numerico and not ch.isdigit():
+                modo_numerico = False
 
-                # 1) Manejo de dígitos
-                if ch.isdigit():
-                    if not modo_numerico:
-                        result += self.PNUM  # activa modo numérico con ⠼
-                        modo_numerico = True
-                    result += self.numbers[ch]
-                    continue
-                
-                # 2) Si aparece algo NO numérico, se apaga el modo
-                if modo_numerico and not ch.isdigit():
-                    modo_numerico = False
+            # 4) Mayúsculas
+            if ch.isalpha() and ch.isupper():
+                base = ch.lower()
+                result += self.PMAYUS + self.map.get(base, "?")
+                continue
 
-                # 3) Manejo de mayúsculas
-                if ch.isalpha() and ch.isupper():
-                    base = ch.lower()
-                    result += self.PMAYUS + self.map.get(base, "?")
-                    continue
+            # 5) Resto de signos, minúsculas, acentos, espacio
+            result += self.map.get(ch, "?")
 
-                # 4) Letras, acentos, signos, espacio
-                result += self.map.get(ch, "?")
-
-            return result
+        return result
 
     # Braille a texto
     def braille_to_text(self, braille):
@@ -173,6 +178,12 @@ class BrailleTranslator:
                 # Si es un símbolo numérico válido
                 if ch in self.inverse_numbers:
                     result += self.inverse_numbers[ch]
+                    i += 1
+                    continue
+                
+                # Soportar comas dentro del modo numérico
+                if ch == self.map[","]:   # ⠂
+                    result += ","
                     i += 1
                     continue
                 
