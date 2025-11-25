@@ -1,2 +1,8 @@
 customtkinter
 Pillow
+
+pytest
+pytest-html
+coverage
+
+pyinstaller
