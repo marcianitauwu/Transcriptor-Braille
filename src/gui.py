@@ -2,12 +2,24 @@
 import tkinter as tk
 import ctypes
 import sys
+import os
 from tkinter import messagebox
 import customtkinter as ctk
 from PIL import Image, ImageTk 
 
-from translator import BrailleTranslator
-from util import clean_input, is_valid_text, is_braille
+from src.translator import BrailleTranslator
+from src.util import clean_input, is_valid_text
+
+# --- FUNCIÓN PARA RUTAS RELATIVAS (NECESARIA PARA EL .EXE) ---
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta al recurso, funciona para dev y para PyInstaller """
+    try:
+        # PyInstaller crea una carpeta temporal en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class BrailleApp(ctk.CTk):
     """Ventana principal de la aplicación del Transcriptor Braille
@@ -31,7 +43,8 @@ class BrailleApp(ctk.CTk):
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
         try:
-            self.iconbitmap("src/img/icono.ico")
+            icon_path = resource_path(os.path.join("src", "img", "icono.ico"))
+            self.iconbitmap(icon_path)
         except:
             pass
 
@@ -49,7 +62,7 @@ class BrailleApp(ctk.CTk):
 
 
         # Se inicializan y registran todas las pantallas
-        for F in (StartScreen, MenuScreen, TextToBrailleScreen, BrailleToTextScreen):
+        for F in (StartScreen, MenuScreen, TextToBrailleScreen):
             frame = F(container, self)
             self.frames[F] = frame
             frame.place(relwidth=1, relheight=1)
@@ -83,7 +96,8 @@ class StartScreen(ctk.CTkFrame):
         
         # Intentar cargar imagen de fondo
         try:
-            self.original_image = Image.open("src/img/fondito.png")
+            img_path = resource_path(os.path.join("src", "img", "fondito.png"))
+            self.original_image = Image.open(img_path)
             self.canvas.bind("<Configure>", self.resize_background)
         except Exception as e:
             pass
@@ -175,19 +189,6 @@ class MenuScreen(ctk.CTkFrame):
             command=lambda: controller.show_frame(TextToBrailleScreen)
         ).pack(pady=15)
 
-        # Botón Braille a Texto
-        ctk.CTkButton(
-            self,
-            text="Braille ➜ Texto",
-            font=("Segoe UI", 20, "bold"),
-            fg_color="#6F83E5",
-            hover_color="#505DA1",
-            corner_radius=30,
-            width=350,
-            height=70,
-            command=lambda: controller.show_frame(BrailleToTextScreen)
-        ).pack(pady=15)
-
         # Botón regresar
         ctk.CTkButton(
             self,
@@ -277,86 +278,6 @@ class TextToBrailleScreen(ctk.CTkFrame):
             return
 
         result = self.translator.text_to_braille(text)
-
-        self.output_text.delete("0.0", "end")
-        self.output_text.insert("0.0", result)
-
-
-# Pantalla 4, aquí se convierte de puntitos a texto
-class BrailleToTextScreen(ctk.CTkFrame):
-    """
-    Pantalla para convertir Braille a texto.
-    """
-    def __init__(self, parent, controller):
-        super().__init__(parent, fg_color="#25282E")
-        self.controller = controller
-        self.translator = controller.translator
-
-        ctk.CTkLabel(
-            self,
-            text="Braille ➜ Texto",
-            text_color="white",
-            font=("Segoe UI", 24, "bold")
-        ).pack(pady=(30, 20))
-
-        # Entrada de Braille
-        ctk.CTkLabel(self, text="Texto Braille:", font=("Segoe UI", 14), text_color="#cccccc").pack()
-
-        self.input_text = ctk.CTkTextbox(
-            self, width=600, height=100, corner_radius=10,
-            fg_color="#2d2d2d", text_color="white", font=("Segoe UI", 14)
-        )
-        self.input_text.pack(pady=10)
-
-        # Botón convertir
-        ctk.CTkButton(
-            self,
-            text="Convertir",
-            font=("Segoe UI", 20, "bold"),
-            fg_color="#6F83E5",
-            hover_color="#505DA1",
-            corner_radius=30,
-            width=250,
-            height=50,
-            command=self.convert
-        ).pack(pady=20)
-
-        ctk.CTkLabel(self, text="Resultado:", font=("Segoe UI", 14), text_color="#cccccc").pack()
-
-        # Resultado
-        self.output_text = ctk.CTkTextbox(
-            self, width=600, height=100, corner_radius=10,
-            fg_color="#2d2d2d", text_color="white", font=("Segoe UI", 14)
-        )
-        self.output_text.pack(pady=10)
-
-        # Botón regresar
-        ctk.CTkButton(
-            self,
-            text="Regresar",
-            font=("Segoe UI", 20, "bold"),
-            fg_color="#401a63",
-            hover_color="#5e4574",
-            corner_radius=30,
-            width=250,
-            height=50,
-            command=lambda: controller.show_frame(MenuScreen)
-        ).pack(pady=20)
-
-    def convert(self):
-        """Convierte el texto Braille de entrada a texto normal y muestra el resultado.
-        """
-        raw_text = self.input_text.get("0.0", "end").strip()
-        text = clean_input(raw_text)
-
-        if not text:
-            return
-
-        if not is_braille(text):
-            messagebox.showerror("Error", "Braille inválido.")
-            return
-
-        result = self.translator.braille_to_text(text)
 
         self.output_text.delete("0.0", "end")
         self.output_text.insert("0.0", result)

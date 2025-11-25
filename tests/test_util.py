@@ -1,4 +1,4 @@
-from src.util import is_valid_text, is_braille
+from src.util import is_valid_text
 
 def test_is_valid_text():
     # Casos válidos
@@ -15,15 +15,3 @@ def test_is_valid_text():
     assert is_valid_text("@#$%^&*") is False
     assert is_valid_text("Hola ⠓⠕") is False  # Mezcla de Braille y texto
 
-def test_is_braille():
-    # Casos válidos
-    assert is_braille("⠓⠕⠇⠁") is True
-    assert is_braille("⠼⠁⠃⠉") is True  # números
-    assert is_braille("⠨⠓⠕⠇⠁") is True  # mayúscula en Braille
-    assert is_braille("⠨⠓⠕⠇⠁⠂ ⠦⠉⠕⠍⠕ ⠑⠎⠞⠁⠎⠦") is True
-
-    # Casos inválidos
-    assert is_braille("") is False
-    assert is_braille("Hola") is False
-    assert is_braille("⣿") is False  # símbolo no estándar
-    assert is_braille("⠓⠕ Hola") is False  # mezcla

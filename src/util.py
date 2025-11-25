@@ -1,7 +1,7 @@
 # util.py
 
 #Funciones auxiliares para validación y limpieza.
-from translator import BrailleTranslator
+from src.translator import BrailleTranslator
 
 translator = BrailleTranslator()
 
@@ -60,30 +60,3 @@ def is_valid_text(text: str) -> bool:
       # Carácter no válido
       return False
    return True
-# --------------------------------------------------------
-def is_braille(text: str) -> bool:
-    """Verifica si una cadena de texto contiene únicamente caracteres Braille válidos o espacios.
-
-    Utiliza el rango Unicode estándar para las celdas Braille (U+2800 a U+28FF, que corresponde
-    a '⠀' hasta '⣿').
-
-    Args:
-        text (str): La cadena a validar.
-
-    Returns:
-        bool: True si la cadena es Braille válido (o solo espacios), False en caso contrario.
-    """
-    # Verifica si todos los caracteres pertenecen al rango Braille
-    if not text:
-        return False
-
-    # ⣿ es Unicode Braille, pero NO se usa en Braille literario → no se incluye.
-    valid = set(translator.inverse.keys()) | \
-            set(translator.inverse_numbers.keys()) | \
-            {translator.PNUM, translator.PMAYUS, " "}
-
-    for ch in text:
-        if ch not in valid:
-            return False
-
-    return True
