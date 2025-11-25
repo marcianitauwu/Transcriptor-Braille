@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Agregar la carpeta 'src' al sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
 from src.util import is_valid_text
 
 def test_is_valid_text():

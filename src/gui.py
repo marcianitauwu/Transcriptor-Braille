@@ -7,8 +7,8 @@ from tkinter import messagebox
 import customtkinter as ctk
 from PIL import Image, ImageTk 
 
-from src.translator import BrailleTranslator
-from src.util import clean_input, is_valid_text
+from translator import BrailleTranslator
+from util import clean_input, is_valid_text
 
 # --- FUNCIÓN PARA RUTAS RELATIVAS (NECESARIA PARA EL .EXE) ---
 def resource_path(relative_path):

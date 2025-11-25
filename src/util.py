@@ -1,7 +1,7 @@
 # util.py
 
 #Funciones auxiliares para validación y limpieza.
-from src.translator import BrailleTranslator
+from translator import BrailleTranslator
 
 translator = BrailleTranslator()
 
