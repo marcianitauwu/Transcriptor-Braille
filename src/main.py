@@ -17,5 +17,5 @@ Requisitos:
 from gui import BrailleApp
 
 if __name__ == "__main__":
-   app = BrailleApp()
-   app.mainloop()
+  app = BrailleApp()
+  app.mainloop()
