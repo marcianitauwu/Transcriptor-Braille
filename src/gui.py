@@ -28,7 +28,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk 
 
 from translator import BrailleTranslator
-from util import clean_input, is_valid_text
+from util import clean_input, is_valid_text, is_valid_braille
 
 # --- FUNCIÓN PARA RUTAS RELATIVAS (NECESARIA PARA EL .EXE) ---
 def resource_path(relative_path):
@@ -93,7 +93,7 @@ class BrailleApp(ctk.CTk):
         self.frames = {}
 
         # Se inicializan y registran todas las pantallas disponibles
-        for F in (StartScreen, MenuScreen, TextToBrailleScreen):
+        for F in (StartScreen, MenuScreen, TextToBrailleScreen, BrailleToTextScreen):
             frame = F(container, self)
             self.frames[F] = frame
             frame.place(relwidth=1, relheight=1)
@@ -223,6 +223,19 @@ class MenuScreen(ctk.CTkFrame):
             width=350,
             height=70,
             command=lambda: controller.show_frame(TextToBrailleScreen)
+        ).pack(pady=15)
+        
+        # Botón Braille a Texto
+        ctk.CTkButton(
+            self,
+            text="Braille ➜ Texto",
+            font=("Segoe UI", 20, "bold"),
+            fg_color="#3d79e1",
+            hover_color="#2e61bb",
+            corner_radius=30,
+            width=350,
+            height=70,
+            command=lambda: controller.show_frame(BrailleToTextScreen)
         ).pack(pady=15)
 
         # Botón regresar
@@ -436,6 +449,223 @@ class TextToBrailleScreen(ctk.CTkFrame):
             for linea in lineas_braille:
                 text_object_braille.textLine(linea)
             c.drawText(text_object_braille)
+
+            # Pie de página
+            c.setFont("Helvetica", 10)
+            c.drawCentredString(ancho / 2, 30, "Generado por Transcriptor Braille - 2025")
+
+            # Guardar archivo
+            c.save()
+            messagebox.showinfo("Éxito", "PDF generado correctamente.")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo generar el PDF:\n{e}")
+
+
+# Pantalla 4, aquí se convierte de braille a texto
+class BrailleToTextScreen(ctk.CTkFrame):
+    """
+    Pantalla funcional para la conversión de Braille a Texto.
+    
+    Funcionalidades:
+    - Entrada de texto en Braille (Textbox).
+    - Validación de entrada Braille.
+    - Visualización del resultado en texto normal.
+    - Generación de PDF descargable.
+    """
+    def __init__(self, parent, controller):
+        super().__init__(parent, fg_color="#25282E")
+        self.controller = controller
+        self.translator = controller.translator
+
+        ctk.CTkLabel(
+            self,
+            text="Braille ➜ Texto",
+            text_color="white",
+            font=("Segoe UI", 24, "bold")
+        ).pack(pady=(30, 20))
+
+        # --- Entrada de Braille ---
+        ctk.CTkLabel(
+            self, 
+            text="Texto en Braille:", 
+            font=("Segoe UI", 14), 
+            text_color="#cccccc"
+        ).pack()
+        
+        self.input_braille = ctk.CTkTextbox(
+            self, width=600, height=100, corner_radius=10, 
+            fg_color="#2d2d2d", text_color="white", font=("Segoe UI", 20)
+        )
+        self.input_braille.pack(pady=10)
+
+        # --- Frame de Botones de Acción ---
+        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame.pack(pady=20)
+
+        # Botón Convertir
+        ctk.CTkButton(
+            btn_frame,
+            text="Convertir",
+            font=("Segoe UI", 20, "bold"),
+            fg_color="#3d79e1",
+            hover_color="#2e61bb",
+            corner_radius=30,
+            width=200,
+            height=50,
+            command=self.convert
+        ).pack(side="left", padx=10)
+
+        # Botón Imprimir PDF
+        ctk.CTkButton(
+            btn_frame,
+            text="Imprimir PDF",
+            font=("Segoe UI", 20, "bold"),
+            fg_color="#28a745",
+            hover_color="#218838",
+            corner_radius=30,
+            width=200,
+            height=50,
+            command=self.generar_pdf
+        ).pack(side="left", padx=10)
+
+        # --- Resultado ---
+        ctk.CTkLabel(
+            self, 
+            text="Resultado:", 
+            font=("Segoe UI", 14), 
+            text_color="#cccccc"
+        ).pack()
+
+        self.output_text = ctk.CTkTextbox(
+            self, width=600, height=100, corner_radius=10, 
+            fg_color="#2d2d2d", text_color="white", font=("Segoe UI", 14) 
+        )
+        self.output_text.pack(pady=10)
+
+        # Botón regresar
+        ctk.CTkButton(
+            self,
+            text="Regresar",
+            font=("Segoe UI", 20, "bold"),
+            fg_color="#401a63",
+            hover_color="#5e4574",
+            corner_radius=30,
+            width=250,
+            height=50,
+            command=lambda: controller.show_frame(MenuScreen)
+        ).pack(pady=20)
+
+    def convert(self):
+        """
+        Obtiene el texto en Braille del usuario, lo valida y lo traduce a texto normal.
+        Actualiza el cuadro de texto de salida con el resultado.
+        """
+        from util import is_valid_braille
+        
+        raw_braille = self.input_braille.get("0.0", "end").strip()
+        braille = clean_input(raw_braille)
+
+        if not braille:
+            return
+
+        if not is_valid_braille(braille):
+            messagebox.showerror("Error", "Texto inválido. Use solo caracteres Braille.")
+            return
+
+        result = self.translator.braille_to_text(braille)
+
+        self.output_text.delete("0.0", "end")
+        self.output_text.insert("0.0", result)
+
+    def generar_pdf(self):
+        """
+        Genera un archivo PDF que contiene el texto Braille original y su traducción.
+
+        Lógica del proceso:
+        1. Verifica que haya contenido para traducir.
+        2. Abre un cuadro de diálogo para que el usuario elija dónde guardar.
+        3. Configura el Canvas de ReportLab (tamaño A4).
+        4. Registra fuentes compatibles con Braille y texto normal.
+        5. Escribe el contenido en el PDF.
+        """
+        texto_braille = self.input_braille.get("0.0", "end").strip()
+        texto_traducido = self.output_text.get("0.0", "end").strip()
+
+        if not texto_braille or not texto_traducido:
+            messagebox.showwarning("Advertencia", "Primero debes convertir un texto para poder imprimirlo.")
+            return
+
+        # 1. Abrir diálogo para guardar archivo
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("Archivos PDF", "*.pdf")],
+            title="Guardar PDF"
+        )
+
+        if not filename:
+            return # El usuario canceló la operación
+
+        try:
+            # 2. Configuración del Canvas
+            c = canvas.Canvas(filename, pagesize=A4)
+            ancho, alto = A4
+            
+            # --- SELECCIÓN DE FUENTES ---
+            font_name = "Helvetica" # Fallback por defecto
+            
+            try:
+                # INTENTO 1: Segoe UI Symbol (para Braille)
+                ruta_fuente = os.path.join(os.environ['WINDIR'], 'Fonts', 'seguisym.ttf')
+                pdfmetrics.registerFont(TTFont('FuenteBraille', ruta_fuente))
+                font_name = 'FuenteBraille'
+                
+            except Exception:
+                try:
+                    # INTENTO 2: Arial (Backup)
+                    ruta_fuente = os.path.join(os.environ['WINDIR'], 'Fonts', 'arial.ttf')
+                    pdfmetrics.registerFont(TTFont('ArialBackup', ruta_fuente))
+                    font_name = 'ArialBackup'
+                except:
+                    print("Advertencia: No se pudo cargar ninguna fuente TTF del sistema.")
+            
+            # 3. Dibujar contenido en el PDF
+            
+            # Título principal
+            c.setFont(font_name, 24)
+            c.drawCentredString(ancho / 2, alto - 50, "Transcriptor Braille")
+            
+            # Línea separadora
+            c.setLineWidth(1)
+            c.line(50, alto - 60, ancho - 50, alto - 60)
+
+            # --- Bloque Texto Braille ---
+            c.setFont(font_name, 14)
+            c.drawString(50, alto - 100, "Texto en Braille:")
+            
+            # Configuración para word-wrap
+            text_object_braille = c.beginText(50, alto - 120)
+            text_object_braille.setFont(font_name, 20)
+            
+            lineas_braille = simpleSplit(texto_braille, font_name, 20, ancho - 100)
+            for linea in lineas_braille:
+                text_object_braille.textLine(linea)
+            c.drawText(text_object_braille)
+
+            # Calcular posición dinámica para el siguiente bloque
+            y_pos = alto - 120 - (len(lineas_braille) * 25) - 40
+            
+            # --- Bloque Texto Traducido ---
+            c.setFont(font_name, 14)
+            c.drawString(50, y_pos, "Traducción a Texto:")
+            
+            text_object_traducido = c.beginText(50, y_pos - 30)
+            text_object_traducido.setFont(font_name, 12)
+            
+            lineas_traducido = simpleSplit(texto_traducido, font_name, 12, ancho - 100)
+            for linea in lineas_traducido:
+                text_object_traducido.textLine(linea)
+            c.drawText(text_object_traducido)
 
             # Pie de página
             c.setFont("Helvetica", 10)

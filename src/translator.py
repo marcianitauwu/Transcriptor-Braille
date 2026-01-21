@@ -135,3 +135,77 @@ class BrailleTranslator:
             result += self.map.get(ch, "?")
 
         return result
+    
+    def braille_to_text(self, braille):
+        """Convierte una cadena de Braille en texto normal.
+
+        La traducción maneja:
+        - Prefijos de mayúsculas
+        - Prefijos numéricos
+        - Caracteres especiales y acentuados
+        
+        Args:
+            braille (str): Cadena en Braille a convertir.
+
+        Returns:
+            str: Cadena de texto normal resultante.
+        """
+        result = ""
+        i = 0
+        modo_numerico = False
+        siguiente_mayuscula = False
+
+        while i < len(braille):
+            ch = braille[i]
+
+            # Detectar prefijo de mayúscula
+            if ch == self.PMAYUS:
+                siguiente_mayuscula = True
+                i += 1
+                continue
+
+            # Detectar prefijo numérico
+            if ch == self.PNUM:
+                modo_numerico = True
+                i += 1
+                continue
+
+            # Si estamos en modo numérico
+            if modo_numerico:
+                # Verificar si es un número
+                if ch in self.inverse_numbers:
+                    result += self.inverse_numbers[ch]
+                    i += 1
+                    continue
+                # Si es una coma, mantener modo numérico
+                elif ch == self.map[","]:
+                    result += ","
+                    i += 1
+                    continue
+                # Cualquier otro carácter sale del modo numérico
+                else:
+                    modo_numerico = False
+
+            # Espacio
+            if ch == " ":
+                result += " "
+                i += 1
+                continue
+
+            # Buscar en el mapa inverso
+            if ch in self.inverse:
+                letra = self.inverse[ch]
+                
+                # Aplicar mayúscula si corresponde
+                if siguiente_mayuscula and letra.isalpha():
+                    letra = letra.upper()
+                    siguiente_mayuscula = False
+                
+                result += letra
+            else:
+                # Carácter no reconocido
+                result += "?"
+            
+            i += 1
+
+        return result
