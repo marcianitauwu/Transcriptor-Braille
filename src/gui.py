@@ -368,10 +368,9 @@ class TextToBrailleScreen(ctk.CTkFrame):
            Sin esto, los caracteres Braille se verían como cuadros vacíos (tofu).
         5. Escribe el contenido en el PDF.
         """
-        texto_original = self.input_text.get("0.0", "end").strip()
         texto_braille = self.output_text.get("0.0", "end").strip()
 
-        if not texto_original or not texto_braille:
+        if not texto_braille:
             messagebox.showwarning("Advertencia", "Primero debes convertir un texto para poder imprimirlo.")
             return
 
@@ -379,7 +378,7 @@ class TextToBrailleScreen(ctk.CTkFrame):
         filename = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("Archivos PDF", "*.pdf")],
-            title="Guardar PDF"
+            title="Guardar PDF para Impresión Braille"
         )
 
         if not filename:
@@ -412,47 +411,23 @@ class TextToBrailleScreen(ctk.CTkFrame):
             # -------------------------------------------
             
             # 3. Dibujar contenido en el PDF
+            # Aplicar modo espejo
+            c.saveState()
+            c.translate(ancho, 0)
+            c.scale(-1, 1)
             
-            # Título principal
-            c.setFont(font_name, 24)
-            c.drawCentredString(ancho / 2, alto - 50, "Transcriptor Braille")
+            # --- DIBUJAR CONTENIDO EN ESPEJO ---            
+             # --- Texto Braille en grande ---
+            text_object_braille = c.beginText(50, alto - 80)
+            text_object_braille.setFont(font_name, 28)
+            text_object_braille.setLeading(40)
             
-            # Línea separadora
-            c.setLineWidth(1)
-            c.line(50, alto - 60, ancho - 50, alto - 60)
-
-            # --- Bloque Texto Original ---
-            c.setFont(font_name, 14)
-            c.drawString(50, alto - 100, "Texto Original:")
+            lineas_braille = simpleSplit(texto_braille, font_name, 28, ancho - 100)
             
-            # Configuración para word-wrap (ajuste de línea automático)
-            text_object = c.beginText(50, alto - 120)
-            text_object.setFont(font_name, 12)
-            
-            lineas_original = simpleSplit(texto_original, font_name, 12, ancho - 100)
-            for linea in lineas_original:
-                text_object.textLine(linea)
-            c.drawText(text_object)
-
-            # Calcular posición dinámica para el siguiente bloque
-            y_pos = alto - 120 - (len(lineas_original) * 15) - 40
-            
-            # --- Bloque Texto Braille ---
-            c.setFont(font_name, 14)
-            c.drawString(50, y_pos, "Traducción Braille:")
-            
-            text_object_braille = c.beginText(50, y_pos - 30)
-            # Fuente más grande para que el Braille sea legible táctilmente (si se imprime en relieve)
-            text_object_braille.setFont(font_name, 20) 
-            
-            lineas_braille = simpleSplit(texto_braille, font_name, 20, ancho - 100)
             for linea in lineas_braille:
                 text_object_braille.textLine(linea)
+            
             c.drawText(text_object_braille)
-
-            # Pie de página
-            c.setFont("Helvetica", 10)
-            c.drawCentredString(ancho / 2, 30, "Generado por Transcriptor Braille - 2025")
 
             # Guardar archivo
             c.save()
