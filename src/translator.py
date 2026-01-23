@@ -50,8 +50,8 @@ class BrailleTranslator:
             "_": "⠤",            
             "-": "⠤",
             
-            "¨": "⠶",
-            "=": "⠶",            
+            "x": "⠦",
+            "¨": "⠦",
                             
             "¡": "⠖",            
             "!": "⠖",       
@@ -67,9 +67,9 @@ class BrailleTranslator:
             ":": "⠒",
             "(": "⠣",
             ")": "⠜",
-            "x": "⠦",
             "÷": "⠲",
-            
+            "=": "⠶",         
+                
             # Espacio
             " ": " "
         }
@@ -135,77 +135,159 @@ class BrailleTranslator:
             result += self.map.get(ch, "?")
 
         return result
-    
-    def braille_to_text(self, braille):
-        """Convierte una cadena de Braille en texto normal.
 
-        La traducción maneja:
-        - Prefijos de mayúsculas
-        - Prefijos numéricos
-        - Caracteres especiales y acentuados
+    def braille_to_text(self, braille):
+        """
+        Traduce una cadena de caracteres Braille a texto normal (ASCII/Unicode).
+        
+        Características principales:
+        1. Manejo de estado para MODO NUMÉRICO (detecta prefijos de número).
+        2. Lógica contextual para símbolos ambiguos (Ej: '⠖' puede ser '+' o '!' o '¡').
+        3. Soporte para mayúsculas (prefijo '⠨').
+        4. Lookahead/Lookbehind: Analiza caracteres adyacentes para decidir el significado.
         
         Args:
-            braille (str): Cadena en Braille a convertir.
-
+            braille (str): Cadena conteniendo caracteres Unicode Braille.
+            
         Returns:
-            str: Cadena de texto normal resultante.
+            str: Texto traducido y formateado.
         """
-        result = ""
         i = 0
-        modo_numerico = False
-        siguiente_mayuscula = False
+        result = ""
+        is_number = False
 
         while i < len(braille):
             ch = braille[i]
+            prev = braille[i-1] if i > 0 else None
+            next = braille[i+1] if i < len(braille)-1 else None    
 
-            # Detectar prefijo de mayúscula
+            # A. Prefijo de Mayúscula (⠨)
             if ch == self.PMAYUS:
-                siguiente_mayuscula = True
-                i += 1
-                continue
-
-            # Detectar prefijo numérico
-            if ch == self.PNUM:
-                modo_numerico = True
-                i += 1
-                continue
-
-            # Si estamos en modo numérico
-            if modo_numerico:
-                # Verificar si es un número
-                if ch in self.inverse_numbers:
-                    result += self.inverse_numbers[ch]
+                if next in self.inverse:
+                    letra = self.inverse.get(next, "?")
+                    result += letra.upper()
+                    i += 2 
+                    continue
+                else:
                     i += 1
                     continue
-                # Si es una coma, mantener modo numérico
-                elif ch == self.map[","]:
+
+            # B. Prefijo Numérico (⠼)
+            if ch == self.PNUM:
+                is_number = True
+                i += 1
+                continue
+            
+            # --- PROCESAMIENTO MODO NUMÉRICO ---
+            if is_number:
+                # Espacio rompe el número
+                if ch == " ":
+                    is_number = False
+                    result += " "
+                    i += 1
+                    continue
+                
+                # Dígitos válidos
+                numero = self.inverse_numbers.get(ch, None)
+                if numero is not None:
+                    result += numero
+                    i += 1
+                    continue
+                
+                # Coma decimal
+                if ch == "⠂": 
                     result += ","
                     i += 1
                     continue
-                # Cualquier otro carácter sale del modo numérico
+                
+                # Caso Especial: Signos Matemáticos (+ - x = ÷)
+                # Si encontramos uno, NO rompemos el modo numérico inmediatamente aquí (pass),
+                # permitimos que el flujo continúe hacia la lógica contextual más abajo
+                # para que se interpreten como operaciones matemáticas y no puntuación.
+                if ch in ["⠖", "⠤", "⠦", "⠶", "⠲"]:
+                    pass # Dejamos que la lógica de abajo procese el signo
                 else:
-                    modo_numerico = False
+                    is_number = False # Cualquier otra cosa rompe el número
+            
+            # LÓGICA DE SIGNOS CONTEXTUALES
 
-            # Espacio
-            if ch == " ":
-                result += " "
+            # Resta (-) vs Guion bajo (_) -> Símbolo (⠤)
+            if ch == "⠤":
+                # Si está rodeado de números o venimos de un número, es Resta (-)
+                if is_number or (self._is_number_char(prev) and self._is_number_char(next)):
+                    result += "-"
+                    # Nota: Mantenemos is_number en True para el siguiente digito
+                else:
+                    result += "_"
+                    is_number = False
                 i += 1
                 continue
 
-            # Buscar en el mapa inverso
-            if ch in self.inverse:
-                letra = self.inverse[ch]
-                
-                # Aplicar mayúscula si corresponde
-                if siguiente_mayuscula and letra.isalpha():
-                    letra = letra.upper()
-                    siguiente_mayuscula = False
-                
-                result += letra
-            else:
-                # Carácter no reconocido
-                result += "?"
+            # Multiplicación (x) vs Diéresis (¨) -> Símbolo (⠦)
+            if ch == "⠦":
+                # Si venimos de un número, es Multiplicación (x)
+                if is_number or (self._is_number_char(prev) and self._is_number_char(next)):
+                    result += "x" 
+                else:
+                    result += "¨"
+                    is_number = False
+                i += 1
+                continue
+
+            # Suma (+) vs Admiración (! ¡) -> Símbolo (⠖)
+            if ch == "⠖":
+                # Si venimos de un número, es Suma (+)
+                if is_number or (self._is_number_char(prev) and self._is_number_char(next)):
+                    result += "+"
+                # Si está al principio o tras espacio -> ¡
+                elif prev is None or prev == " ": 
+                    result += "¡"
+                    is_number = False
+                # En cualquier otro caso -> !
+                else: 
+                    result += "!"
+                    is_number = False
+                i += 1
+                continue
+
+            # Interrogación (¿ ?) -> Símbolo (⠢)
+            if ch == "⠢":
+                if prev is None or prev == " ": # Al inicio -> ¿
+                    result += "¿"
+                else: # Al final -> ?
+                    result += "?"
+                is_number = False
+                i += 1
+                continue
             
+            # Igual (=) -> Símbolo (⠶)
+            if ch == "⠶":
+                result += "="
+                # El igual suele mantener el contexto matemático
+                i += 1
+                continue
+
+            # División (÷) -> Símbolo (⠲)
+            if ch == "⠲":
+                result += "÷"
+                i += 1
+                continue
+
+            # Resto de caracteres (letras, etc.)
+            val = self.inverse.get(ch, "?")
+
+            if val == "mult": val = "x" 
+            
+            result += val
             i += 1
 
         return result
+      
+    def _is_number_char(self, braille_char):
+        """
+        Helper auxiliar para verificar contexto numérico.
+        Determina si el caracter braille dado es un dígito válido o el prefijo numérico.
+        Utilizado para mirar atrás (prev) o adelante (next).
+        """
+        if braille_char is None: return False
+        return braille_char in self.inverse_numbers or braille_char == self.PNUM

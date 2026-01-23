@@ -67,7 +67,7 @@ class BrailleApp(ctk.CTk):
         """Inicializa la ventana principal, configuración, icono y pantallas."""
         super().__init__()
         
-        self.geometry("850x600")
+        self.geometry("850x650")
         
         # Icono de la aplicación en Windows (Barra de tareas)
         if sys.platform == "win32":
@@ -306,8 +306,8 @@ class TextToBrailleScreen(ctk.CTkFrame):
             btn_frame,
             text="Imprimir PDF",
             font=("Segoe UI", 20, "bold"),
-            fg_color="#28a745",
-            hover_color="#218838",
+            fg_color="#35a4b5",
+            hover_color="#29818e",
             corner_radius=30,
             width=200,
             height=50,
@@ -478,6 +478,13 @@ class BrailleToTextScreen(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
         btn_frame.pack(pady=20)
 
+        # Botón para abrir el Teclado Virtual
+        ctk.CTkButton(
+            btn_frame, text="⌨️ Teclado Braille", font=("Segoe UI", 20, "bold"),
+            fg_color="#2a5296", hover_color="#234781", corner_radius=30, width=200, height=50,
+            command=self.open_keyboard
+        ).pack(pady=(0, 15))
+        
         # Botón Convertir
         ctk.CTkButton(
             btn_frame,
@@ -496,8 +503,8 @@ class BrailleToTextScreen(ctk.CTkFrame):
             btn_frame,
             text="Imprimir PDF",
             font=("Segoe UI", 20, "bold"),
-            fg_color="#28a745",
-            hover_color="#218838",
+            fg_color="#35a4b5",
+            hover_color="#29818e",
             corner_radius=30,
             width=200,
             height=50,
@@ -531,6 +538,11 @@ class BrailleToTextScreen(ctk.CTkFrame):
             command=lambda: controller.show_frame(MenuScreen)
         ).pack(pady=20)
 
+    def open_keyboard(self):
+        """Abre la ventana del teclado virtual."""
+        keyboard = VirtualBrailleKeyboard(self, self.input_braille)
+        keyboard.grab_set() # Hace que el foco se quede en el teclado
+        
     def convert(self):
         """
         Obtiene el texto en Braille del usuario, lo valida y lo traduce a texto normal.
@@ -652,3 +664,160 @@ class BrailleToTextScreen(ctk.CTkFrame):
 
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo generar el PDF:\n{e}")
+
+# Ventana flotante del Teclado Braille Virtual
+class VirtualBrailleKeyboard(ctk.CTkToplevel):
+    """
+    Ventana emergente que simula un teclado Braille de 6 puntos.
+
+    Funcionalidades:
+    - Interfaz gráfica de 6 botones interactivos (Matriz Braille).
+    - Vista previa en tiempo real del caracter generado.
+    - Inserción directa al cuadro de texto principal.
+    - Controles de edición básicos (Espacio, Borrar, Reiniciar).
+    """
+    def __init__(self, parent, target_textbox):
+        super().__init__(parent)
+        self.target_textbox = target_textbox
+        
+        # --- Configuración de la Ventana ---
+        self.title("Teclado Braille")
+        self.geometry("400x550")
+        self.resizable(False, False)
+        self.attributes("-topmost", True)
+        self.configure(fg_color="#2b2b2b")
+
+        # Estado inicial de los 6 puntos (Falso = Apagado)
+        self.dots_state = [False, False, False, False, False, False]
+        self.current_char = "⠀"
+
+        # Título
+        ctk.CTkLabel(self, text="Compositor Braille", font=("Segoe UI", 20, "bold"), text_color="white").pack(pady=(15, 5))
+
+        # Área de Puntos (Matriz 2x3)
+        dots_frame = ctk.CTkFrame(self, fg_color="transparent")
+        dots_frame.pack(pady=5)
+
+        self.dot_buttons = []
+        
+        # Configuración visual compartida de los botones
+        btn_config = {
+            "width": 60, "height": 60, "corner_radius": 30,
+            "border_width": 2, "border_color": "white",
+            "fg_color": "transparent", "hover_color": "#555555",
+            "text": ""
+        }
+
+        # Generar columna izquierda (Puntos 1, 2, 3)
+        for i in range(3):
+            btn = ctk.CTkButton(dots_frame, command=lambda idx=i: self.toggle_dot(idx), **btn_config)
+            btn.grid(row=i, column=0, padx=25, pady=6)
+            self.dot_buttons.append(btn)
+
+        # Generar columna derecha (Puntos 4, 5, 6)
+        for i in range(3, 6):
+            btn = ctk.CTkButton(dots_frame, command=lambda idx=i: self.toggle_dot(idx), **btn_config)
+            btn.grid(row=i-3, column=1, padx=25, pady=6)
+            self.dot_buttons.append(btn)
+
+        # Botón Reiniciar (Reset)
+        ctk.CTkButton(
+            self, text="↺", width=40, height=40, corner_radius=20,
+            fg_color="#4390d4", hover_color="#2e61bb", font=("Segoe UI Symbol", 20, "bold"),
+            command=self.reset_dots
+        ).pack(pady=(0, 5))
+
+        # Etiqueta de Vista Previa (Letra grande)
+        self.preview_label = ctk.CTkLabel(self, text="⠀", font=("Segoe UI Symbol", 70), text_color="#3d79e1")
+        self.preview_label.pack(pady=(0, 5))
+
+        # Zona de Acción (Botones de Inserción)
+
+        # Botón Principal: Insertar Caracter
+        ctk.CTkButton(
+            self, text="Insertar", fg_color="#401a63", hover_color="#5e4574",
+            height=45, width=200, corner_radius=30, font=("Segoe UI", 18, "bold"), 
+            command=self.insert_char
+        ).pack(pady=(5, 15)) 
+
+        # Frame contenedor para botones inferiores
+        bottom_row = ctk.CTkFrame(self, fg_color="transparent")
+        bottom_row.pack(fill="x", padx=30, pady=(0, 20)) 
+
+        # Botón Espacio
+        ctk.CTkButton(
+            bottom_row, text="Espacio", fg_color="#3d79e1", hover_color="#2e61bb",
+            height=40, corner_radius=30, font=("Segoe UI", 18, "bold"), command=lambda: self.insert_special(" ")
+        ).pack(side="left", expand=True, padx=(0, 5), fill="x")
+
+        # Botón Borrar
+        ctk.CTkButton(
+            bottom_row, text="Borrar ⌫", fg_color="#c0392b", hover_color="#a93226",
+            height=40, corner_radius=30, font=("Segoe UI", 18, "bold"), command=self.backspace
+        ).pack(side="right", expand=True, padx=(5, 0), fill="x")
+
+    # Lógica del Teclado
+    def toggle_dot(self, index):
+        """
+        Alterna el estado (Encendido/Apagado) de un punto Braille específico.
+        Actualiza el color del botón y refresca la vista previa.
+        """
+        self.dots_state[index] = not self.dots_state[index]
+        btn = self.dot_buttons[index]
+        
+        # Actualizar color visualmente
+        btn.configure(fg_color="#3d79e1" if self.dots_state[index] else "transparent")
+        self.update_preview()
+
+    def update_preview(self):
+        """
+        Calcula el caracter Unicode Braille basado en la combinación de puntos activos.
+        Utiliza lógica de suma hexadecimal según el estándar Unicode (0x2800 base).
+        """
+        char_code = 0x2800
+        
+        # Sumar valores según la posición del punto
+        if self.dots_state[0]: char_code += 0x01
+        if self.dots_state[1]: char_code += 0x02
+        if self.dots_state[2]: char_code += 0x04
+        if self.dots_state[3]: char_code += 0x08
+        if self.dots_state[4]: char_code += 0x10
+        if self.dots_state[5]: char_code += 0x20
+        self.current_char = chr(char_code)
+        
+        # Actualizar etiqueta si existe
+        if hasattr(self, 'preview_label'):
+            self.preview_label.configure(text=self.current_char)
+
+    def insert_char(self):
+        """
+        Inserta el caracter Braille actual en el textbox de la ventana principal
+        y reinicia los puntos para el siguiente caracter.
+        """
+        self.update_preview()
+        if hasattr(self, 'current_char'):
+            self.target_textbox.insert("end", self.current_char)
+            self.reset_dots()
+
+    def insert_special(self, char):
+        """Inserta caracteres especiales (como espacio) sin reiniciar los puntos."""
+        self.target_textbox.insert("end", char)
+
+    def backspace(self):
+        """
+        Elimina el último caracter del textbox principal.
+        Maneja la excepción por si el texto está vacío.
+        """
+        try:
+            current_text = self.target_textbox.get("0.0", "end")
+            if len(current_text) > 0:
+                self.target_textbox.delete("end-2c")
+        except:
+            pass
+
+    def reset_dots(self):
+        """Limpia la selección de puntos y restablece la vista previa a vacío."""
+        self.dots_state = [False] * 6
+        for btn in self.dot_buttons:
+            btn.configure(fg_color="transparent")
+        self.update_preview()
